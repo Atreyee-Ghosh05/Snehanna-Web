@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Snehanna Home Delivery</title>
+<style>
+body {
+  font-family: 'Poppins', sans-serif;
+  text-align: center;
+  background: linear-gradient(135deg, #fff3e0, #ffe0f0, #fff8e7);
+  padding: 20px; margin:0;
+}
+h1 {color:#c96a2b; font-size:38px; margin-bottom:5px; text-shadow:1px 1px 3px #f5c6a5;}
+.header-info{font-size:14px;color:#555; margin-bottom:10px;}
+#menu{display:flex; justify-content:center; flex-wrap:wrap; gap:20px; margin-bottom:30px;}
+.card{background:#fffdf7;padding:15px;border-radius:20px;width:180px;box-shadow:0 6px 12px rgba(0,0,0,0.1);transition:transform 0.3s, box-shadow 0.3s; position:relative; font-size:14px;}
+.card:hover{transform:translateY(-5px);box-shadow:0 8px 20px rgba(0,0,0,0.15);}
+.badge{position:absolute; top:10px; left:10px; background:linear-gradient(45deg,#f76c6c,#ffb86c); color:white; padding:2px 6px; border-radius:5px;font-size:12px;font-weight:bold;}
+.card img{width:100%; border-radius:12px; margin-bottom:10px;}
+.card h3{margin:5px 0;color:#c96a2b;font-size:16px;}
+.card p{margin:3px 0;color:#555; font-style:italic;}
+button{background:linear-gradient(45deg,#ff9966,#ff5e62); color:white;border:none;padding:8px;border-radius:8px;cursor:pointer;margin-top:5px;transition:transform 0.2s, box-shadow 0.2s;}
+button:hover{transform:scale(1.05);box-shadow:0 4px 8px rgba(0,0,0,0.2);}
+.remove-btn{background:red; padding:2px 6px;border-radius:5px;font-size:12px;cursor:pointer;color:white;border:none;}
+.location-btn{background-color:#4CAF50;color:white;border:none;padding:8px;border-radius:8px;cursor:pointer;margin-bottom:10px;transition:background 0.2s;}
+.location-btn:hover{background-color:#388E3C;}
+input, select{padding:10px;width:220px;border-radius:8px;border:1px solid #ccc;margin-bottom:10px;font-size:14px;}
+ul#cart{list-style:none;padding:0;margin-bottom:15px;max-width:400px;margin-left:auto;margin-right:auto;}
+ul#cart li{padding:5px 0;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;font-size:14px;}
+#orderModal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);justify-content:center;align-items:center;}
+#orderModalContent{background:white;padding:20px;border-radius:15px;width:90%;max-width:400px;text-align:left;position:relative;}
+#orderModalContent h2{margin-top:0;}
+#closeModal{position:absolute;top:10px;right:10px;cursor:pointer;font-size:18px;}
+#cancelOrderBtn{background:red; color:white; padding:8px 12px; border:none; border-radius:8px; cursor:pointer; margin-top:10px;}
+@media(max-width:600px){#menu{flex-direction:column;align-items:center;} input,select{width:90%;}}
+</style>
+</head>
+<body>
+
+<h1>🍛 Snehanna Home Delivery 🍤</h1>
+<p class="header-info">📍 Mahishbathan AQ Block | ☎️ 8250099543</p>
+
+<input id="search" placeholder="Search Dish..." onkeyup="searchDish()"><br><br>
+
+<select id="orderType">
+  <option value="pickup">Pickup from Shop</option>
+  <option value="delivery">Home Delivery</option>
+</select><br><br>
+
+<div id="menu"></div>
+
+<h2>Cart 🛒</h2>
+<ul id="cart"></ul>
+<p>Total: Rs <span id="total">0</span></p>
+
+<input id="name" placeholder="Name"><br>
+<input id="address" placeholder="Address"><br>
+<input id="phone" value="8250099543" placeholder="Phone (10 digits)"><br>
+
+<select id="spiceSelect">
+  <option value="Mild">🌶️ Mild</option>
+  <option value="Medium">🌶🌶 Medium</option>
+  <option value="Hot">🌶🌶🌶 Hot</option>
+</select><br>
+
+<select id="payment">
+  <option value="">Select Payment Method</option>
+  <option value="COD">Cash on Delivery</option>
+  <option value="Online">Online Payment</option>
+  <option value="UPI">UPI Payment</option>
+</select><br>
+
+<input id="promo" placeholder="Promo Code"><br>
+<input type="date" id="scheduleDate"><br>
+<input type="time" id="scheduleTime"><br><br>
+
+<button class="location-btn" onclick="getLocation()">📍 Get My Location</button>
+<p id="locationDisplay">Mahishbathan AQ Block</p><br>
+
+<button onclick="placeOrder()">✅ Place Order</button>
+
+<p id="statusDisplay">Order Status: Pending</p>
+
+<!-- Order Modal -->
+<div id="orderModal">
+  <div id="orderModalContent">
+    <span id="closeModal">❌</span>
+    <div id="modalBody"></div>
+    <button id="cancelOrderBtn" onclick="cancelOrder()">❌ Cancel Order</button>
+  </div>
+</div>
+
+<script>
+const foodItems=[
+{name:"🍗 Chicken Curry", price:120, recipe:"Delicious chicken curry", special:true},
+{name:"🥔 Aloo Posto", price:80, recipe:"Potatoes with poppy seeds", special:false},
+{name:"🍚 Rice", price:40, recipe:"Steamed white rice", special:false},
+{name:"🧀 Paneer Butter Masala", price:100, recipe:"Creamy paneer curry", special:true},
+{name:"🦐 Chingri Malai Curry", price:150, recipe:"Prawns in coconut milk", special:false},
+{name:"🥚 Egg Curry", price:90, recipe:"Spicy egg curry", special:false},
+{name:"🐐 Mutton Curry", price:140, recipe:"Tender mutton curry", special:true}
+];
+
+let cart=[], currentOrder={}, otp;
+
+window.onload=function(){
+  const menuDiv=document.getElementById("menu"), cartList=document.getElementById("cart"), totalSpan=document.getElementById("total"),
+  nameInput=document.getElementById("name"), addressInput=document.getElementById("address"), phoneInput=document.getElementById("phone"),
+  paymentSelect=document.getElementById("payment"), promoInput=document.getElementById("promo"),
+  scheduleDate=document.getElementById("scheduleDate"), scheduleTime=document.getElementById("scheduleTime"),
+  spiceSelect=document.getElementById("spiceSelect");
+
+  foodItems.forEach((item,index)=>{
+    const div=document.createElement("div"); div.className="card";
+    if(item.special){const badge=document.createElement("span");badge.className="badge";badge.innerText="TODAY'S SPECIAL";div.appendChild(badge);}
+    const nameEl=document.createElement("h3");nameEl.innerText=item.name;
+    const recipeEl=document.createElement("p");recipeEl.innerText=item.recipe;
+    const priceEl=document.createElement("p");priceEl.innerText="Rs "+item.price;
+    const btn=document.createElement("button");btn.innerText="Add to Cart";btn.addEventListener("click",()=>{addToCart(index); showToast(`${item.name} added!`)});
+    div.append(nameEl,recipeEl,priceEl,btn);menuDiv.appendChild(div);
+  });
+
+  function updateCart(){
+    cartList.innerHTML=""; let total=0;
+    cart.forEach((item,i)=>{
+      total+=item.price*item.quantity;
+      const li=document.createElement("li");
+      li.innerHTML=`${item.name} (x${item.quantity}) - Rs ${item.price*item.quantity} <button class="remove-btn" onclick="removeFromCart(${i})">❌</button>`;
+      cartList.appendChild(li);
+    }); totalSpan.innerText=total;
+  }
+
+  window.addToCart=function(index){
+    const existing=cart.find(i=>i.name===foodItems[index].name);
+    if(existing){existing.quantity+=1;} else{cart.push({...foodItems[index], quantity:1});}
+    updateCart();
+  }
+
+  window.removeFromCart=function(i){cart.splice(i,1); updateCart();}
+
+  window.placeOrder=function(){
+    const name=nameInput.value.trim(), address=addressInput.value.trim(), phone=phoneInput.value.trim(),
+          payment=paymentSelect.value, orderType=document.getElementById("orderType").value,
+          spice=spiceSelect.value;
+
+    if(!name||!phone||(orderType==="delivery"&&!address)){alert("Fill all fields!"); return;}
+    if(phone.length!==10||isNaN(phone)){alert("Phone must be 10 digits!");return;}
+    if(cart.length===0){alert("Cart empty!");return;}
+    if(!payment){alert("Select payment!");return;}
+
+    let discount=0;if(promoInput.value.toUpperCase()==="WELCOME10")discount=0.1;
+    let total=cart.reduce((sum,i)=>sum+i.price*i.quantity,0); let totalAfter=total*(1-discount);
+
+    otp=Math.floor(1000+Math.random()*9000);
+    currentOrder={name, address, phone, payment, type:orderType, spice, cart:[...cart], total:totalAfter, status:"Pending", otp};
+
+    const modalBody=document.getElementById("modalBody");
+    modalBody.innerHTML=`<h2>Order Confirmation</h2>
+      <p><b>Name:</b> ${name}</p>
+      <p><b>Type:</b> ${orderType}</p>
+      <p><b>Spice:</b> ${spice}</p>
+      <p><b>Address:</b> ${address}</p>
+      <p><b>Phone:</b> <a href="tel:${phone}">${phone}</a></p>
+      <p><b>Dishes:</b></p><ul>${cart.map(i=>`<li>${i.name} x${i.quantity} = Rs ${i.price*i.quantity}</li>`).join('')}</ul>
+      <p><b>Subtotal:</b> Rs ${total}</p>
+      <p><b>Discount:</b> Rs ${total*discount}</p>
+      <p><b>Total:</b> Rs ${totalAfter}</p>
+      <p><b>Payment:</b> ${payment}</p>
+      <p><b>OTP for Delivery:</b> ${otp}</p>
+      <p>📞 <a href="tel:${phone}">Call Customer</a></p>`;
+
+    document.getElementById("orderModal").style.display="flex";
+    alert(`New order received!\nCustomer: ${name}\nTotal: Rs ${totalAfter}`);
+    cart=[]; updateCart();
+
+    // Start delivery timer simulation
+    startDeliveryTimer();
+  }
+
+  document.getElementById("closeModal").onclick=function(){document.getElementById("orderModal").style.display="none";}
+}
+
+// Cancel Order
+function cancelOrder(){
+  if(currentOrder.payment==="COD" && currentOrder.status!=="Pending"){
+    alert("❌ COD order cannot be cancelled after delivery started!");
+    return;
+  }
+  alert(`⚠️ Order Cancelled!\nCustomer: ${currentOrder.name}\nTotal: Rs ${currentOrder.total}`);
+  cart=[]; updateCart(); currentOrder={}; document.getElementById("orderModal").style.display="none";
+}
+
+// Search
+function searchDish(){
+  const filter=document.getElementById("search").value.toLowerCase();
+  document.querySelectorAll("#menu .card").forEach(card=>{
+    const name=card.querySelector("h3").innerText.toLowerCase();
+    card.style.display=name.includes(filter)?"block":"none";
+  });
+}
+
+// Location
+function getLocation(){
+  const locDisplay=document.getElementById("locationDisplay");
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(pos=>{
+      const lat=pos.coords.latitude.toFixed(5), lon=pos.coords.longitude.toFixed(5);
+      locDisplay.innerHTML=`Your location: Lat ${lat}, Lon ${lon} <a href="https://www.google.com/maps?q=${lat},${lon}" target="_blank">View on Map</a>`;
+    }, err=>{ locDisplay.innerText="Unable to access location!"; });
+  }else locDisplay.innerText="Geolocation not supported!";
+}
+
+// Toast Notification
+function showToast(msg){
+  const toast=document.createElement("div"); toast.innerText=msg;
+  toast.style.position="fixed"; toast.style.bottom="20px"; toast.style.left="50%";
+  toast.style.transform="translateX(-50%)"; toast.style.background="#4caf50"; toast.style.color="white";
+  toast.style.padding="10px 20px"; toast.style.borderRadius="10px"; toast.style.boxShadow="0 4px 10px rgba(0,0,0,0.2)";
+  toast.style.opacity="0"; toast.style.transition="opacity 0.5s";
+  document.body.appendChild(toast);
+  setTimeout(()=>{ toast.style.opacity="1"; },50);
+  setTimeout(()=>{ toast.style.opacity="0"; setTimeout(()=>{document.body.removeChild(toast);},500); },1500);
+}
+
+// Delivery Timer Simulation
+function startDeliveryTimer() {
+    if(!currentOrder) return;
+    currentOrder.status = "Out for Delivery";
+    document.getElementById("statusDisplay").innerText = "Order Status: Out for Delivery 🚚";
+
+    let minutesLeft = 30;
+    const timer = setInterval(() => {
+        document.getElementById("statusDisplay").innerText = `Order Status: Out for Delivery 🚚 | ETA: ${minutesLeft} min`;
+        minutesLeft--;
+        if(minutesLeft < 0){
+            clearInterval(timer);
+            currentOrder.status = "Delivered";
+            document.getElementById("statusDisplay").innerText = "Order Status: Delivered ✅";
+            alert(`Order Delivered!\nCustomer: ${currentOrder.name}`);
+        }
+    }, 60000);
+}
+</script>
+</body>
+</html>
